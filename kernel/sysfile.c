@@ -503,3 +503,113 @@ sys_pipe(void)
   }
   return 0;
 }
+
+uint64
+sys_getcwd(void)
+{
+  uint64 buf;
+  int size;
+  char path[MAXPATH];
+  char name[DIRSIZ];
+  struct proc *p = myproc();
+  struct inode *ip, *parent;
+  struct dirent de;
+  int off, pathlen, namelen;
+
+  argaddr(0, &buf);
+  argint(1, &size);
+
+  if(size < 2)
+    return 0;
+
+  // Start from current directory
+  ip = idup(p->cwd);
+  
+  // Build path backwards
+  pathlen = 0;
+  path[0] = '\0';
+
+  begin_op();
+  
+  while(1) {
+    ilock(ip);
+    
+    // Check if we're at root (inode number == ROOTINO)
+    if(ip->inum == ROOTINO) {
+      iunlock(ip);
+      iput(ip);
+      break;
+    }
+    
+    // Get parent directory via ".."
+    parent = dirlookup(ip, "..", 0);
+    if(parent == 0) {
+      iunlockput(ip);
+      end_op();
+      return 0;
+    }
+    
+    iunlock(ip);
+    
+    // Search parent for entry pointing to ip
+    ilock(parent);
+    name[0] = '\0';
+    for(off = 0; off < parent->size; off += sizeof(de)) {
+      if(readi(parent, 0, (uint64)&de, off, sizeof(de)) != sizeof(de)) {
+        iunlockput(parent);
+        iput(ip);
+        end_op();
+        return 0;
+      }
+      if(de.inum == ip->inum && namecmp(de.name, ".") != 0 && namecmp(de.name, "..") != 0) {
+        // Found the name
+        safestrcpy(name, de.name, DIRSIZ);
+        break;
+      }
+    }
+    iunlock(parent);
+    iput(ip);
+    
+    if(name[0] == '\0') {
+      // Could not find entry - this shouldn't happen
+      iput(parent);
+      end_op();
+      return 0;
+    }
+    
+    // Prepend "/name" to path
+    namelen = strlen(name);
+    if(pathlen + namelen + 1 >= MAXPATH) {
+      iput(parent);
+      end_op();
+      return 0;  // Path too long
+    }
+    
+    // Shift path right and prepend /name
+    memmove(path + namelen + 1, path, pathlen + 1);
+    path[0] = '/';
+    memmove(path + 1, name, namelen);
+    pathlen += namelen + 1;
+    
+    ip = parent;
+  }
+  
+  end_op();
+
+  // If at root, path is "/"
+  if(pathlen == 0) {
+    path[0] = '/';
+    path[1] = '\0';
+    pathlen = 1;
+  }
+
+  // Check buffer size
+  if(pathlen + 1 > size)
+    return 0;
+
+  // Copy to user space
+  if(copyout(p->pagetable, buf, path, pathlen + 1) < 0)
+    return 0;
+
+  return buf;
+}

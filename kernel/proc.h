@@ -105,3 +105,12 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 };
+
+// Process info structure for ps (shared with user space)
+struct pinfo {
+  int pid;                // Process ID
+  int ppid;               // Parent Process ID
+  int state;              // Process state
+  uint64 sz;              // Memory size in bytes
+  char name[16];          // Process name
+};

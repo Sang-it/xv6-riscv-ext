@@ -107,3 +107,42 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// Get information about all processes
+// Returns number of processes copied, or -1 on error
+extern struct proc proc[];
+
+uint64
+sys_getprocs(void)
+{
+  uint64 addr;  // user buffer address
+  int max;      // max number of pinfo entries
+  struct proc *p;
+  struct pinfo pi;
+  int count = 0;
+
+  argaddr(0, &addr);
+  argint(1, &max);
+
+  for(p = proc; p < &proc[NPROC] && count < max; p++){
+    acquire(&p->lock);
+    if(p->state != UNUSED){
+      pi.pid = p->pid;
+      pi.ppid = p->parent ? p->parent->pid : 0;
+      pi.state = p->state;
+      pi.sz = p->sz;
+      safestrcpy(pi.name, p->name, sizeof(pi.name));
+      
+      // Copy to user space
+      if(copyout(myproc()->pagetable, addr + count * sizeof(pi), 
+                 (char*)&pi, sizeof(pi)) < 0){
+        release(&p->lock);
+        return -1;
+      }
+      count++;
+    }
+    release(&p->lock);
+  }
+  
+  return count;
+}

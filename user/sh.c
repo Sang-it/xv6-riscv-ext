@@ -77,6 +77,13 @@ runcmd(struct cmd *cmd)
     if(ecmd->argv[0] == 0)
       exit(1);
     exec(ecmd->argv[0], ecmd->argv);
+    // If exec failed and path doesn't start with /, try root directory
+    if(ecmd->argv[0][0] != '/'){
+      char buf[100];
+      buf[0] = '/';
+      strcpy(buf+1, ecmd->argv[0]);
+      exec(buf, ecmd->argv);
+    }
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 
