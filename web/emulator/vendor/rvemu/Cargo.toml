@@ -1,0 +1,8 @@
+[package]
+name = "rvemu"
+version = "0.0.11"
+edition = "2021"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"

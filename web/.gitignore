@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/assets/
+**/target/
+emulator/vendor/rvemu/Cargo.lock
+test-results/
+playwright-report/

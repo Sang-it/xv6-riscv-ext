@@ -1,0 +1,19 @@
+{
+  "name": "xv6-browser-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "node scripts/smoke.mjs",
+    "test:emulator": "cargo test --manifest-path emulator/vendor/rvemu/Cargo.toml --lib",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/xterm": "5.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
